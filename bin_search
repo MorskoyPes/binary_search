@@ -1,0 +1,92 @@
+<?php
+
+const UNDEFINED_VALUE = 'undef';
+const LINE_SEP        = "\x0A";
+const COL_DEL         = "\t";
+
+
+function binary_search($file, $key) {
+
+    $res = fopen($file, 'r');
+
+    if (fseek($res, 0, SEEK_END) === 0) { //ставим указатель в конец файла
+        $cur = ftell($res);// получаем значение указателя в байтах;
+        if ($cur === 0) {
+            fclose($res);
+            return UNDEFINED_VALUE;
+        }
+
+        // Ищем ключ
+        $result = search($res, ceil($cur / 2), $key);
+        if ($result === false) {
+            fclose($res);
+            return UNDEFINED_VALUE;
+        } else {
+            fclose($res);
+            return $result;
+        }
+    } else {
+        fclose($res);
+        return UNDEFINED_VALUE;
+    }
+}
+
+function search($res, $pos, $key, $lastSearch = null) {
+    $direction = 0; // указываем направление
+    if (fseek($res, $pos) === 0) { // перемещаем указатель в середину
+        // Теперь нужно найти симовол разделителя строки
+        // идем до начала строки по разделителю
+        $start = findChar($res, LINE_SEP);
+        if ($start === $lastSearch) return false;
+
+        if (fseek($res, $start) === 0) {
+            // читаем строку до разделителя
+            $str = stream_get_line($res, 4096, LINE_SEP); //читает с текущего положения указателя до разрыва строки
+            // Разбиваем её на массив
+            $str  = explode(COL_DEL, $str);
+            $cKey = $str[0];
+            $val  = $str[1];
+
+            // ошибка! Пустой ключ или значение
+            if (empty($cKey) || empty($val)) return false;
+
+            if ($cKey === $key) {
+                return $val;
+            } else if ($cKey > $key) {
+                $direction = -1;
+            } else if ($cKey < $key) {
+                $direction = 1;
+            }
+            unset($str, $cKey, $val);
+        }
+    } else {
+        // Не удалось переместить указатель
+        return false;
+    }
+
+    if ($direction < 0) {
+        // ключ больше чем нам нужно, нужно искать в области < $pos
+        return search($res, ceil($pos / 2), $key, $start);
+    } else if ($direction > 0) {
+        // ключ меньше, чем нам нужно, нужно искать в области > $pos
+        return search($res, ceil($pos + $pos / 2), $key, $start);
+    } else {
+        return false;
+    }
+}
+
+function findChar($res, $char) {
+    $charPos = 0;
+
+    while (fseek($res, -2, SEEK_CUR) === 0) {
+        // fgetc сдвигает указатель, поэтому для обратного чтения нужно свдигать указатель на 2
+        if (fgetc($res) === $char) {
+            $charPos = ftell($res);
+            break;
+        }
+    }
+
+    return $charPos;
+}
+
+echo binary_search('gen-data.txt', 'ключ2') . PHP_EOL;
