@@ -50,14 +50,14 @@ function search($res, $pos, $key, $lastSearch = null) {
             // ошибка! Пустой ключ или значение
             if (empty($cKey) || empty($val)) return false;
 
-            if ($cKey === $key) {
+            $r = strnatcmp($cKey, $key);// сравниваем два значения
+            if ($r === 0) {
                 return $val;
-            } else if ($cKey > $key) {
+            } else if ($r > 0) {
                 $direction = -1;
-            } else if ($cKey < $key) {
+            } else if ($r < 0) {
                 $direction = 1;
             }
-            unset($str, $cKey, $val);
         }
     } else {
         // Не удалось переместить указатель
